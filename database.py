@@ -1,12 +1,18 @@
-import json
-import os
 import streamlit as st
+import requests
 
-# De naam van het onzichtbare bestandje op je Mac
-BESTAND = "mijn_budget_data.json"
+# Haal de geheime codes op uit de veilige Streamlit-kluis
+BIN_ID = st.secrets["BIN_ID"]
+API_KEY = st.secrets["API_KEY"]
+URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
+
+HEADERS = {
+    "X-Master-Key": API_KEY,
+    "Content-Type": "application/json"
+}
 
 def laad_data():
-    """Haalt de data uit het bestand en zet het in het geheugen van de app."""
+    """Haalt de data uit de online kluis (JSONBin) in plaats van je Mac."""
     standaard_data = {
         "inkomsten": [],
         "vaste_kosten": [],
@@ -15,22 +21,24 @@ def laad_data():
         "leefgeld": []
     }
     
-    # Als het bestand al bestaat, lees het dan uit
-    if os.path.exists(BESTAND):
-        with open(BESTAND, "r") as file:
-            try:
-                opgeslagen_data = json.load(file)
-                standaard_data.update(opgeslagen_data)
-            except:
-                pass # Als het bestand leeg of stuk is, gebeurt er niets
-                
-    # Stop alles veilig in de ladekasten (session_state)
+    try:
+        # Vraag de data op bij het internet
+        response = requests.get(URL, headers=HEADERS)
+        if response.status_code == 200:
+            # Als het lukt, overschrijf de standaard_data met jouw online data
+            opgeslagen_data = response.json().get("record", {})
+            standaard_data.update(opgeslagen_data)
+    except:
+        # Als er even geen internet is, doen we niets en pakken we lege data
+        pass 
+            
+    # Stop alles veilig in de ladekasten (session_state) van de app
     for lade, inhoud in standaard_data.items():
         if lade not in st.session_state:
             st.session_state[lade] = inhoud
 
 def sla_data_op():
-    """Pakt het huidige geheugen en schrijft het definitief weg naar het bestand."""
+    """Schrijft de nieuwe data direct weg naar de online kluis."""
     data_om_te_bewaren = {
         "inkomsten": st.session_state.get("inkomsten", []),
         "vaste_kosten": st.session_state.get("vaste_kosten", []),
@@ -39,5 +47,8 @@ def sla_data_op():
         "leefgeld": st.session_state.get("leefgeld", [])
     }
     
-    with open(BESTAND, "w") as file:
-        json.dump(data_om_te_bewaren, file, indent=4)
+    try:
+        # Stuur het hele pakketje naar JSONBin
+        requests.put(URL, json=data_om_te_bewaren, headers=HEADERS)
+    except:
+        pass
