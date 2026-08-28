@@ -18,7 +18,8 @@ def laad_data():
         "vaste_kosten": [],
         "periodieke_kosten": [],
         "schulden": [],
-        "leefgeld": []
+        "leefgeld": [],
+        "variabele_facturen": []  # <--- Hier is je nieuwe ladekast!
     }
     
     try:
@@ -44,7 +45,8 @@ def sla_data_op():
         "vaste_kosten": st.session_state.get("vaste_kosten", []),
         "periodieke_kosten": st.session_state.get("periodieke_kosten", []),
         "schulden": st.session_state.get("schulden", []),
-        "leefgeld": st.session_state.get("leefgeld", [])
+        "leefgeld": st.session_state.get("leefgeld", []),
+        "variabele_facturen": st.session_state.get("variabele_facturen", []) # <--- En hier wordt hij veilig weggeschreven!
     }
     
     try:

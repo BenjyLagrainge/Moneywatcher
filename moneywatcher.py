@@ -18,7 +18,7 @@ def bereken_totaal(lijst, kolomnaam):
 # ==========================================
 st.sidebar.title("Mijn Systeem ⚙️")
 
-maanden_lijst = ["Augustus 2026", "September 2026", "Oktober 2026", "November 2026", "December 2026"]
+maanden_lijst = ["Augustus 2026", "September 2026", "Oktober 2026", "November 2026", "December 2026", "Januari 2027", "Februari 2027"]
 eerder_gekozen = st.session_state.get('huidige_maand', maanden_lijst[0])
 
 geselecteerde_maand = st.sidebar.selectbox(
@@ -36,14 +36,17 @@ st.sidebar.info("Tip: Vaste kosten en schulden worden automatisch meegerekend in
 # ==========================================
 inkomsten_deze_maand = [ink for ink in st.session_state.inkomsten if ink.get("Maand") == geselecteerde_maand]
 leefgeld_deze_maand = [lg for lg in st.session_state.leefgeld if lg.get("Maand") == geselecteerde_maand]
+facturen_deze_maand = [f for f in st.session_state.variabele_facturen if f.get("Maand") == geselecteerde_maand] # NIEUW
 
 tot_ink = bereken_totaal(inkomsten_deze_maand, 'Bedrag')
 tot_leefgeld = bereken_totaal(leefgeld_deze_maand, 'Bedrag')
+tot_facturen = bereken_totaal(facturen_deze_maand, 'Bedrag') # NIEUW
 tot_vast = bereken_totaal(st.session_state.vaste_kosten, 'Bedrag')
 tot_per_maand = bereken_totaal(st.session_state.periodieke_kosten, 'Per Maand Sparen')
 tot_schuld_maand = bereken_totaal(st.session_state.schulden, 'Aflossing/mnd')
 
-totale_uitgaven = tot_vast + tot_per_maand + tot_schuld_maand + tot_leefgeld
+# Facturen zijn nu ook toegevoegd aan je totale uitgaven!
+totale_uitgaven = tot_vast + tot_per_maand + tot_schuld_maand + tot_leefgeld + tot_facturen
 reserve = tot_ink - totale_uitgaven
 
 # ==========================================
@@ -51,14 +54,13 @@ reserve = tot_ink - totale_uitgaven
 # ==========================================
 st.title(f"📊 Dashboard: {geselecteerde_maand.upper()}")
 
-# --- RIJ 1: KPI BLOKKEN (Zoals de bovenkant van je screenshot) ---
+# --- RIJ 1: KPI BLOKKEN ---
 st.markdown("### 💰 Financiële Samenvatting")
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
 kpi1.metric("Totale Inkomsten", f"€ {tot_ink:.2f}")
 kpi2.metric("Totale Uitgaven", f"€ {totale_uitgaven:.2f}")
 
-# Kleur van de reserve aanpassen op basis van winst/verlies
 if reserve >= 0:
     kpi3.metric("Netto Reserve (Winst)", f"€ {reserve:.2f}")
 else:
@@ -73,29 +75,28 @@ grafiek_col1, grafiek_col2 = st.columns(2)
 
 with grafiek_col1:
     st.markdown("#### 🍩 Cashflow Overzicht")
-    # Donut grafiek maken
-    labels = ['Vaste Kosten', 'Provisie (Jaarlijks)', 'Schulden', 'Leefgeld', 'Overig / Reserve']
     
-    # Als er reserve is, tonen we dat. Als we in de min staan, zetten we reserve op 0 voor de grafiek.
+    # Variabele facturen toegevoegd aan de labels
+    labels = ['Vaste Kosten', 'Provisie (Jaarlijks)', 'Schulden', 'Leefgeld', 'Var. Facturen', 'Overig / Reserve']
     weergave_reserve = reserve if reserve > 0 else 0
-    waardes = [tot_vast, tot_per_maand, tot_schuld_maand, tot_leefgeld, weergave_reserve]
+    waardes = [tot_vast, tot_per_maand, tot_schuld_maand, tot_leefgeld, tot_facturen, weergave_reserve]
     
     fig_donut = px.pie(
         names=labels, 
         values=waardes, 
-        hole=0.6, # Dit maakt het een donut in plaats van een taart
+        hole=0.6,
         color_discrete_sequence=px.colors.qualitative.Pastel
     )
-    # Grafiek wat mooier maken
     fig_donut.update_layout(margin=dict(t=0, b=0, l=0, r=0), showlegend=True)
     st.plotly_chart(fig_donut, use_container_width=True)
 
 with grafiek_col2:
     st.markdown("#### 📊 Uitgaven Verdeling")
-    # Staafgrafiek maken
+    
+    # Variabele facturen toegevoegd aan de staven
     data_staven = pd.DataFrame({
-        "Categorie": ["Vaste Kosten", "Provisie", "Schulden", "Leefgeld"],
-        "Bedrag (€)": [tot_vast, tot_per_maand, tot_schuld_maand, tot_leefgeld]
+        "Categorie": ["Vaste Kosten", "Provisie", "Schulden", "Leefgeld", "Facturen"],
+        "Bedrag (€)": [tot_vast, tot_per_maand, tot_schuld_maand, tot_leefgeld, tot_facturen]
     })
     
     fig_bar = px.bar(
