@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import json  # <--- NIEUW: Nodig voor de perfecte verwijder-check!
+import json
 from database import laad_data, sla_data_op
 
 # 1. Altijd eerst je data inladen uit de kluis!
@@ -45,21 +45,19 @@ with st.form("leefgeld_form"):
         st.success(f"Budget toegevoegd voor {huidige_maand}!")
         st.rerun()
         
-andere_maanden = [lg for lg in st.session_state.leefgeld if lg.get("Maand") != huidige_maand]
-deze_maand = [lg for lg in st.session_state.leefgeld if lg.get("Maand") == huidige_maand]
+andere_maanden = [lg for lg in st.session_state.get("leefgeld", []) if lg.get("Maand") != huidige_maand]
+deze_maand = [lg for lg in st.session_state.get("leefgeld", []) if lg.get("Maand") == huidige_maand]
 
 if deze_maand:
     st.write(f"### Je Budgetten voor {huidige_maand} (Bewerkbaar)")
     df = pd.DataFrame(deze_maand)
     edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key="edit_leefgeld")
     
-    # Update de lijst op de achtergrond altijd met wat er in de tabel staat
     st.session_state.leefgeld = andere_maanden + edited_df.to_dict('records')
     
     # DE NIEUWE OPSLAAN-KNOP!
     if st.button("💾 Sla wijzigingen in tabel op"):
         sla_data_op()
-        # Je database.py zorgt hierna automatisch voor die groene pop-up!
         
 else:
     st.info(f"Je hebt nog geen leefgeld-budgetten ingevuld voor {huidige_maand}.")

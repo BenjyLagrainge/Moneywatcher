@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import datetime  
+import datetime
 from database import laad_data
 
 st.set_page_config(page_title="Moneywatcher", layout="wide")
@@ -19,19 +19,14 @@ def bereken_totaal(lijst, kolomnaam):
 # ==========================================
 st.sidebar.title("Mijn Systeem ⚙️")
 
-import datetime
-
 maanden_lijst = ["Augustus 2026", "September 2026", "Oktober 2026", "November 2026", "December 2026", "Januari 2027", "Februari 2027"]
 
-# 1. Kijk welke maand het nu ECHT is in de wereld
+# De Slimme Klok
 nu = datetime.datetime.now()
 maanden_nl = {1: "Januari", 2: "Februari", 3: "Maart", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Augustus", 9: "September", 10: "Oktober", 11: "November", 12: "December"}
 echte_huidige_maand = f"{maanden_nl[nu.month]} {nu.year}"
-
-# 2. Check of deze maand in jouw lijstje staat, anders pakken we de eerste
 standaard_maand = echte_huidige_maand if echte_huidige_maand in maanden_lijst else maanden_lijst[0]
 
-# 3. Pak wat je eerder koos in de app, of anders de standaard maand
 eerder_gekozen = st.session_state.get('huidige_maand', standaard_maand)
 
 geselecteerde_maand = st.sidebar.selectbox(
@@ -47,18 +42,18 @@ st.sidebar.info("Tip: Vaste kosten en schulden worden automatisch meegerekend in
 # ==========================================
 # 3. BEREKENINGEN VOOR DE MAAND
 # ==========================================
-inkomsten_deze_maand = [ink for ink in st.session_state.inkomsten if ink.get("Maand") == geselecteerde_maand]
-leefgeld_deze_maand = [lg for lg in st.session_state.leefgeld if lg.get("Maand") == geselecteerde_maand]
-facturen_deze_maand = [f for f in st.session_state.variabele_facturen if f.get("Maand") == geselecteerde_maand] # NIEUW
+# Met extra veilige get() functies zodat hij nooit crasht als een lade nog leeg is!
+inkomsten_deze_maand = [ink for ink in st.session_state.get("inkomsten", []) if ink.get("Maand") == geselecteerde_maand]
+leefgeld_deze_maand = [lg for lg in st.session_state.get("leefgeld", []) if lg.get("Maand") == geselecteerde_maand]
+facturen_deze_maand = [f for f in st.session_state.get("variabele_facturen", []) if f.get("Maand") == geselecteerde_maand] 
 
 tot_ink = bereken_totaal(inkomsten_deze_maand, 'Bedrag')
 tot_leefgeld = bereken_totaal(leefgeld_deze_maand, 'Bedrag')
-tot_facturen = bereken_totaal(facturen_deze_maand, 'Bedrag') # NIEUW
-tot_vast = bereken_totaal(st.session_state.vaste_kosten, 'Bedrag')
-tot_per_maand = bereken_totaal(st.session_state.periodieke_kosten, 'Per Maand Sparen')
-tot_schuld_maand = bereken_totaal(st.session_state.schulden, 'Aflossing/mnd')
+tot_facturen = bereken_totaal(facturen_deze_maand, 'Bedrag') 
+tot_vast = bereken_totaal(st.session_state.get("vaste_kosten", []), 'Bedrag')
+tot_per_maand = bereken_totaal(st.session_state.get("periodieke_kosten", []), 'Per Maand Sparen')
+tot_schuld_maand = bereken_totaal(st.session_state.get("schulden", []), 'Aflossing/mnd')
 
-# Facturen zijn nu ook toegevoegd aan je totale uitgaven!
 totale_uitgaven = tot_vast + tot_per_maand + tot_schuld_maand + tot_leefgeld + tot_facturen
 reserve = tot_ink - totale_uitgaven
 
@@ -67,7 +62,6 @@ reserve = tot_ink - totale_uitgaven
 # ==========================================
 st.title(f"📊 Dashboard: {geselecteerde_maand.upper()}")
 
-# --- RIJ 1: KPI BLOKKEN ---
 st.markdown("### 💰 Financiële Samenvatting")
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
@@ -83,13 +77,10 @@ kpi4.metric("Totaal Leefgeld", f"€ {tot_leefgeld:.2f}")
 
 st.divider()
 
-# --- RIJ 2: GRAFIEKEN ---
 grafiek_col1, grafiek_col2 = st.columns(2)
 
 with grafiek_col1:
     st.markdown("#### 🍩 Cashflow Overzicht")
-    
-    # Variabele facturen toegevoegd aan de labels
     labels = ['Vaste Kosten', 'Provisie (Jaarlijks)', 'Schulden', 'Leefgeld', 'Var. Facturen', 'Overig / Reserve']
     weergave_reserve = reserve if reserve > 0 else 0
     waardes = [tot_vast, tot_per_maand, tot_schuld_maand, tot_leefgeld, tot_facturen, weergave_reserve]
@@ -105,8 +96,6 @@ with grafiek_col1:
 
 with grafiek_col2:
     st.markdown("#### 📊 Uitgaven Verdeling")
-    
-    # Variabele facturen toegevoegd aan de staven
     data_staven = pd.DataFrame({
         "Categorie": ["Vaste Kosten", "Provisie", "Schulden", "Leefgeld", "Facturen"],
         "Bedrag (€)": [tot_vast, tot_per_maand, tot_schuld_maand, tot_leefgeld, tot_facturen]
