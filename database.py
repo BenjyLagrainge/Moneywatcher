@@ -1,56 +1,64 @@
 import streamlit as st
 import requests
 
-# Haal de geheime codes op uit de veilige Streamlit-kluis
+# We gebruiken hier de NAAM van je secret, Streamlit Cloud doet de rest!
 BIN_ID = st.secrets["BIN_ID"]
 API_KEY = st.secrets["API_KEY"]
 URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
 
+# We voegen 'X-Bin-Versioning': 'false' toe zodat hij je kluis direct overschrijft zonder verwarrende 'versies' aan te maken.
 HEADERS = {
     "X-Master-Key": API_KEY,
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "X-Bin-Versioning": "false" 
 }
 
 def laad_data():
-    """Haalt de data uit de online kluis (JSONBin) in plaats van je Mac."""
+    """Haalt data uit de kluis (1x per sessie om blokkades te voorkomen)."""
+    if "data_geladen" in st.session_state:
+        return # We hebben de data al, we hoeven het internet niet opnieuw op!
+        
     standaard_data = {
         "inkomsten": [],
         "vaste_kosten": [],
         "periodieke_kosten": [],
         "schulden": [],
         "leefgeld": [],
-        "variabele_facturen": []  # <--- Hier is je nieuwe ladekast!
+        "variabele_facturen": []
     }
     
     try:
-        # Vraag de data op bij het internet
         response = requests.get(URL, headers=HEADERS)
         if response.status_code == 200:
-            # Als het lukt, overschrijf de standaard_data met jouw online data
             opgeslagen_data = response.json().get("record", {})
             standaard_data.update(opgeslagen_data)
-    except:
-        # Als er even geen internet is, doen we niets en pakken we lege data
+        else:
+            st.error(f"Fout bij ophalen! Code: {response.status_code}")
+    except Exception as e:
         pass 
             
-    # Stop alles veilig in de ladekasten (session_state) van de app
     for lade, inhoud in standaard_data.items():
-        if lade not in st.session_state:
-            st.session_state[lade] = inhoud
+        st.session_state[lade] = inhoud
+        
+    # Markeer dat we klaar zijn met laden
+    st.session_state["data_geladen"] = True
 
 def sla_data_op():
-    """Schrijft de nieuwe data direct weg naar de online kluis."""
+    """Schrijft de nieuwe data direct weg en toont een pop-up."""
     data_om_te_bewaren = {
         "inkomsten": st.session_state.get("inkomsten", []),
         "vaste_kosten": st.session_state.get("vaste_kosten", []),
         "periodieke_kosten": st.session_state.get("periodieke_kosten", []),
         "schulden": st.session_state.get("schulden", []),
         "leefgeld": st.session_state.get("leefgeld", []),
-        "variabele_facturen": st.session_state.get("variabele_facturen", []) # <--- En hier wordt hij veilig weggeschreven!
+        "variabele_facturen": st.session_state.get("variabele_facturen", [])
     }
     
     try:
-        # Stuur het hele pakketje naar JSONBin
-        requests.put(URL, json=data_om_te_bewaren, headers=HEADERS)
-    except:
-        pass
+        response = requests.put(URL, json=data_om_te_bewaren, headers=HEADERS)
+        if response.status_code == 200:
+            st.toast("✅ Veilig opgeslagen in de cloud!")
+        else:
+            st.error(f"Fout bij opslaan! (Code {response.status_code})")
+    except Exception as e:
+        st.error(f"Geen verbinding met internet: {e}")

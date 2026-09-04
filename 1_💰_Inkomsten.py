@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import datetime  # <--- BELANGRIJK: Toegevoegd voor de automatische datum
+import datetime
 from database import laad_data, sla_data_op
 
 # Altijd eerst data inladen voor de zekerheid
@@ -65,8 +65,11 @@ if deze_maand:
     edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key="edit_ink")
     
     nieuwe_inkomsten = andere_maanden + edited_df.to_dict('records')
+    
+    # HIER IS DE AANGEPASTE TOAST CODE VOOR INKOMSTEN:
     if st.session_state.inkomsten != nieuwe_inkomsten:
         st.session_state.inkomsten = nieuwe_inkomsten
         sla_data_op()
+        st.toast("✅ Inkomsten opgeslagen in de cloud!")
 else:
     st.info(f"Je hebt nog geen inkomsten ingevuld voor {huidige_maand}.")
