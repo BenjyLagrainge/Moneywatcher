@@ -53,11 +53,13 @@ if deze_maand:
     df = pd.DataFrame(deze_maand)
     edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key="edit_leefgeld")
     
-    nieuwe_leefgeld_lijst = andere_maanden + edited_df.to_dict('records')
+    # Update de lijst op de achtergrond altijd met wat er in de tabel staat
+    st.session_state.leefgeld = andere_maanden + edited_df.to_dict('records')
     
-    # HIER IS DE KOGELVRIJE CHECK (Net als bij de schulden):
-    if json.dumps(st.session_state.leefgeld) != json.dumps(nieuwe_leefgeld_lijst):
-        st.session_state.leefgeld = nieuwe_leefgeld_lijst
-        sla_data_op() # <--- Triggert nu netjes de pop-up vanuit de database!
+    # DE NIEUWE OPSLAAN-KNOP!
+    if st.button("💾 Sla wijzigingen in tabel op"):
+        sla_data_op()
+        # Je database.py zorgt hierna automatisch voor die groene pop-up!
+        
 else:
     st.info(f"Je hebt nog geen leefgeld-budgetten ingevuld voor {huidige_maand}.")
