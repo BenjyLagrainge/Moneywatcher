@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import datetime  
 from database import laad_data
 
 st.set_page_config(page_title="Moneywatcher", layout="wide")
