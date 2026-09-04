@@ -1,15 +1,24 @@
 import streamlit as st
 import pandas as pd
+import datetime  # <--- BELANGRIJK: Toegevoegd voor de automatische datum
 from database import laad_data, sla_data_op
 
 # Altijd eerst data inladen voor de zekerheid
 laad_data()
 
 # ==========================================
-# DE MAAND-KIEZER (In de zijbalk)
+# DE SLIMME MAAND-KIEZER (In de zijbalk)
 # ==========================================
 maanden_lijst = ["Augustus 2026", "September 2026", "Oktober 2026", "November 2026", "December 2026", "Januari 2027", "Februari 2027"]
-eerder_gekozen = st.session_state.get('huidige_maand', maanden_lijst[0])
+
+# Kijk welke maand het nu ECHT is
+nu = datetime.datetime.now()
+maanden_nl = {1: "Januari", 2: "Februari", 3: "Maart", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Augustus", 9: "September", 10: "Oktober", 11: "November", 12: "December"}
+echte_huidige_maand = f"{maanden_nl[nu.month]} {nu.year}"
+standaard_maand = echte_huidige_maand if echte_huidige_maand in maanden_lijst else maanden_lijst[0]
+
+# Pak wat je eerder koos, of anders de huidige maand in de echte wereld
+eerder_gekozen = st.session_state.get('huidige_maand', standaard_maand)
 
 huidige_maand = st.sidebar.selectbox(
     "🗓️ Welke maand wil je invullen?", 
