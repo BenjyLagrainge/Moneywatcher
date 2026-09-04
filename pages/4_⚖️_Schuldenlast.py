@@ -1,10 +1,17 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import json
+from database import laad_data, sla_data_op  # <--- NU STAAN ZE ER ALLEBEI!
+
+# 1. Altijd eerst je data inladen uit de kluis!
+laad_data()
 
 st.title("⚖️ Overzicht Schulden & Aflossingstabel")
 
-# 1. Formulier
+# ==========================================
+# 1. FORMULIER OM TOE TE VOEGEN
+# ==========================================
 with st.form("schuld_form"):
     col1, col2 = st.columns(2)
     with col1:
@@ -19,14 +26,42 @@ with st.form("schuld_form"):
             "Bedrag (€)": totaal_saldo,
             "Aflossing/mnd": afbetaling
         })
+        sla_data_op()
         st.success("Schuld geregistreerd!")
-        
-# 2. De data bewerken en tonen
+        st.rerun()
+
+# ==========================================
+# 2. TABEL BEWERKEN EN TONEN
+# ==========================================
 if st.session_state.schulden:
-    st.write("### Beheer je Schulden (Pas saldo of aflossing aan)")
+    
+    st.write("### 📉 Maandelijkse Afschrijving")
+    st.info("Klik één keer per maand op deze knop om de aflossing van je openstaande bedragen af te trekken.")
+
+    if st.button("💸 Trek aflossingen af (Voor deze maand)"):
+        nieuwe_schulden_lijst = []
+        for schuld in st.session_state.schulden:
+            huidig_bedrag = float(schuld.get("Bedrag (€)", 0))
+            aflossing = float(schuld.get("Aflossing/mnd", 0))
+            nieuw_bedrag = max(0.0, huidig_bedrag - aflossing)
+            schuld["Bedrag (€)"] = nieuw_bedrag
+            nieuwe_schulden_lijst.append(schuld)
+            
+        st.session_state.schulden = nieuwe_schulden_lijst
+        sla_data_op()
+        st.success("BAM! Alle aflossingen zijn van het openstaande bedrag afgetrokken.")
+        st.rerun()
+    
+    st.write("### Beheer je Schulden (Pas saldo aan of verwijder een rij)")
     df_base = pd.DataFrame(st.session_state.schulden)
     edited_base = st.data_editor(df_base, num_rows="dynamic", use_container_width=True, key="edit_schulden")
-    st.session_state.schulden = edited_base.to_dict('records')
+    
+    nieuwe_lijst = edited_base.to_dict('records')
+    
+    # We gebruiken hier 'json.dumps' om heel precies te controleren of jij een rij hebt verwijderd
+    if json.dumps(st.session_state.schulden) != json.dumps(nieuwe_lijst):
+        st.session_state.schulden = nieuwe_lijst
+        sla_data_op()  # Dit triggert nu direct de groene pop-up uit database.py!
     
     st.divider()
     st.subheader("Jouw Aflossingstabel (Komende 6 maanden)")
@@ -49,7 +84,6 @@ if st.session_state.schulden:
         for i in range(1, 7):
             toekomstige_maand_index = (vandaag.month + i - 1) % 12
             toekomstige_maand_naam = maand_namen[toekomstige_maand_index]
-            
             restant = max(0, restant - aflossing)
             rij[toekomstige_maand_naam] = round(restant, 2)
             

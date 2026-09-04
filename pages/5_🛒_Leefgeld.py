@@ -1,8 +1,34 @@
 import streamlit as st
 import pandas as pd
+import datetime
+import json
+from database import laad_data, sla_data_op
 
-huidige_maand = st.session_state.get('huidige_maand', 'Augustus 2026')
+# 1. Altijd eerst je data inladen uit de kluis!
+laad_data()
 
+# ==========================================
+# DE SLIMME MAAND-KIEZER (In de zijbalk)
+# ==========================================
+maanden_lijst = ["Augustus 2026", "September 2026", "Oktober 2026", "November 2026", "December 2026", "Januari 2027", "Februari 2027"]
+
+nu = datetime.datetime.now()
+maanden_nl = {1: "Januari", 2: "Februari", 3: "Maart", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Augustus", 9: "September", 10: "Oktober", 11: "November", 12: "December"}
+echte_huidige_maand = f"{maanden_nl[nu.month]} {nu.year}"
+standaard_maand = echte_huidige_maand if echte_huidige_maand in maanden_lijst else maanden_lijst[0]
+
+eerder_gekozen = st.session_state.get('huidige_maand', standaard_maand)
+
+huidige_maand = st.sidebar.selectbox(
+    "🗓️ Welke maand wil je invullen?", 
+    maanden_lijst,
+    index=maanden_lijst.index(eerder_gekozen) if eerder_gekozen in maanden_lijst else 0
+)
+st.session_state.huidige_maand = huidige_maand
+
+# ==========================================
+# PAGINA LOGICA
+# ==========================================
 st.title(f"🛒 Leefgeld ({huidige_maand})")
 st.write(f"Beheer hier je budgetten (boodschappen, tanken, ontspanning) voor **{huidige_maand}**.")
 
@@ -15,11 +41,12 @@ with st.form("leefgeld_form"):
             "Categorie": naam, 
             "Bedrag": bedrag
         })
+        sla_data_op()
         st.success(f"Budget toegevoegd voor {huidige_maand}!")
         st.rerun()
         
-andere_maanden = [lg for lg in st.session_state.leefgeld if lg.get("Maand") != huidige_maand]
-deze_maand = [lg for lg in st.session_state.leefgeld if lg.get("Maand") == huidige_maand]
+andere_maanden = [lg for lg in st.session_state.get("leefgeld", []) if lg.get("Maand") != huidige_maand]
+deze_maand = [lg for lg in st.session_state.get("leefgeld", []) if lg.get("Maand") == huidige_maand]
 
 if deze_maand:
     st.write(f"### Je Budgetten voor {huidige_maand} (Bewerkbaar)")
@@ -27,5 +54,10 @@ if deze_maand:
     edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key="edit_leefgeld")
     
     st.session_state.leefgeld = andere_maanden + edited_df.to_dict('records')
+    
+    # DE NIEUWE OPSLAAN-KNOP!
+    if st.button("💾 Sla wijzigingen in tabel op"):
+        sla_data_op()
+        
 else:
     st.info(f"Je hebt nog geen leefgeld-budgetten ingevuld voor {huidige_maand}.")
