@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-import datetime  # <--- Nodig voor de slimme klok
+import datetime
+import json  # <--- NIEUW: Nodig voor de perfecte verwijder-check!
 from database import laad_data, sla_data_op
 
 # 1. Altijd eerst je data inladen uit de kluis!
@@ -54,10 +55,9 @@ if deze_maand:
     
     nieuwe_leefgeld_lijst = andere_maanden + edited_df.to_dict('records')
     
-    # Check of er iets handmatig is veranderd in de tabel. Zo ja? Opslaan!
-    if st.session_state.leefgeld != nieuwe_leefgeld_lijst:
+    # HIER IS DE KOGELVRIJE CHECK (Net als bij de schulden):
+    if json.dumps(st.session_state.leefgeld) != json.dumps(nieuwe_leefgeld_lijst):
         st.session_state.leefgeld = nieuwe_leefgeld_lijst
-        sla_data_op()
-        st.toast("✅ Leefgeld opgeslagen in de cloud!") # <--- De handige pop-up!
+        sla_data_op() # <--- Triggert nu netjes de pop-up vanuit de database!
 else:
     st.info(f"Je hebt nog geen leefgeld-budgetten ingevuld voor {huidige_maand}.")
