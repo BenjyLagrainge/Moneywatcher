@@ -18,8 +18,20 @@ def bereken_totaal(lijst, kolomnaam):
 # ==========================================
 st.sidebar.title("Mijn Systeem ⚙️")
 
+import datetime
+
 maanden_lijst = ["Augustus 2026", "September 2026", "Oktober 2026", "November 2026", "December 2026", "Januari 2027", "Februari 2027"]
-eerder_gekozen = st.session_state.get('huidige_maand', maanden_lijst[0])
+
+# 1. Kijk welke maand het nu ECHT is in de wereld
+nu = datetime.datetime.now()
+maanden_nl = {1: "Januari", 2: "Februari", 3: "Maart", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Augustus", 9: "September", 10: "Oktober", 11: "November", 12: "December"}
+echte_huidige_maand = f"{maanden_nl[nu.month]} {nu.year}"
+
+# 2. Check of deze maand in jouw lijstje staat, anders pakken we de eerste
+standaard_maand = echte_huidige_maand if echte_huidige_maand in maanden_lijst else maanden_lijst[0]
+
+# 3. Pak wat je eerder koos in de app, of anders de standaard maand
+eerder_gekozen = st.session_state.get('huidige_maand', standaard_maand)
 
 geselecteerde_maand = st.sidebar.selectbox(
     "🗓️ Welke maand wil je bekijken?", 
